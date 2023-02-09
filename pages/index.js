@@ -1,57 +1,64 @@
 import Head from "next/head";
 import { useState } from "react";
 import styles from "./index.module.css";
+import axios from "axios";
 
 export default function Home() {
-  const [animalInput, setAnimalInput] = useState("");
-  const [result, setResult] = useState();
+  const [searchInput, setSearchInput] = useState("");
+  const [result, setResult] = useState("");
 
   async function onSubmit(event) {
     event.preventDefault();
-    try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ animal: animalInput }),
-      });
 
-      const data = await response.json();
+    try {
+      const response = await axios.post(
+        "https://api.openai.com/v1/images/generations",
+        {
+          prompt: searchInput,
+          n: 1,
+          size: "1024x1024",
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+          },
+        }
+      );
       if (response.status !== 200) {
-        throw data.error || new Error(`Request failed with status ${response.status}`);
+        throw (
+          response.data.error ||
+          new Error(`Request failed with status ${response.status}`)
+        );
       }
 
-      setResult(data.result);
-      setAnimalInput("");
-    } catch(error) {
-      // Consider implementing your own error handling logic here
+      setResult(response.data.data[0].url);
+    } catch (error) {
       console.error(error);
-      alert(error.message);
     }
   }
 
   return (
     <div>
       <Head>
-        <title>OpenAI Quickstart</title>
+        <title>Image Creator</title>
         <link rel="icon" href="/dog.png" />
       </Head>
 
       <main className={styles.main}>
-        <img src="/dog.png" className={styles.icon} />
-        <h3>Name my pet</h3>
+        <h3>Create Images from a Prompt</h3>
+        <p>Powered by DALL-E</p>
         <form onSubmit={onSubmit}>
           <input
             type="text"
             name="animal"
-            placeholder="Enter an animal"
-            value={animalInput}
-            onChange={(e) => setAnimalInput(e.target.value)}
+            placeholder=""
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
-          <input type="submit" value="Generate names" />
+          <input type="submit" value="Generate Image" />
         </form>
-        <div className={styles.result}>{result}</div>
+        <img className={styles.result} src={result} />
       </main>
     </div>
   );
